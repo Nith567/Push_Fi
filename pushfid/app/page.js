@@ -4,8 +4,10 @@ import { send } from '@pushprotocol/restapi/src/lib/chat';
   import { createSocketConnection, EVENTS } from '@pushprotocol/socket';
   import { ethers } from 'ethers';
   import { useEffect, useState } from 'react';
-  const [aliceChats, setAliceChats] = useState([]);
+
   import { CovalentClient } from "@covalenthq/client-sdk";
+  import { LitNodeClientNodeJs } from "@lit-protocol/lit-node-client-nodejs";
+  import { ProviderType } from "@lit-protocol/constants";
 
  function Home() {
 const [state, setState] = useState({
@@ -13,6 +15,9 @@ const [state, setState] = useState({
   signer:null
 
 });
+const [aliceChats, setAliceChats] = useState([]);
+const [datas,SetDatas]=useState(null)
+const [inputText, setInputText] = useState('')
 const [data,setData]=useState({})
 const [account, setAccount] = useState('None');
 const connectWallet = async () => {
@@ -44,6 +49,46 @@ const connectWallet = async () => {
       console.log(error);
   }
 };
+const handleInputChange = (e) => {
+  setInputText(e.target.value); // Update the inputText state with the input value
+};
+
+
+const computePublicKey = async (userId, appId) =>{
+  const litNodeClient = new LitNodeClientNodeJs({
+    litNetwork: "cayenne",
+    debug: false,
+  });
+  await litNodeClient.connect();
+
+  try {
+    const keyId = litNodeClient.computeHDKeyId(userId, appId);
+    console.log(keyId);
+    const managedKeyId = keyId.substring(2);
+    const publicKey = litNodeClient.computeHDPubKey(managedKeyId);
+    console.log(publicKey);
+    // const address = publicKeyToAddress(publicKey);
+    // console.log(address);
+    console.log("user public key will be: ", publicKey);
+    return publicKey;
+  } catch (error) {
+    console.log(error);
+    return;
+  }
+};
+
+
+const getDiscordPubKey = async () => {
+  try {
+    const user_id = "882160225862430730";
+    console.log(user_id);
+    const publicKey = await computePublicKey(session?.user.email, process.env.DISCORD_CLIENT_ID);
+    console.log("public Key: "+publicKey);
+    setPublicKey(publicKey);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 
 
@@ -57,10 +102,6 @@ let addressExists = false;
       for await (const resp of client.TransactionService.getAllTransactionsForAddress("eth-mainnet","0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5")
       ) 
        {
-        // if (resp.to_address === '0xEA64CbF3E0666D0A9ae465dfc6b6Ca6207377b96') {
-        //   addressExists = true;
-        //   break;
-        // }
       if(resp.to_address==='0xe688b84b23f322a994a53dbf8e15fa82cdb71127'){
         addressExists=true;
         break;
@@ -106,7 +147,17 @@ const newGroup = await userA?.chat?.group?.create(groupName,
   },)
   console.log(newGroup)
 }
-
+const Twitterpos = async () => {
+  try {
+      const apiUrl = `https://proof-service.next.id/v1/proof?platform=twitter&identity=${inputText}&exact=true`;
+      const response = await axios.get(apiUrl);
+      const responseData = response.data;
+      SetDatas(responseData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+  
 
 const createChannel=async()=>{
   const userA= await PushAPI.initialize(state.signer, { env: 'staging' });
@@ -187,7 +238,6 @@ const sendMesage=async()=>{
     }
   });
   console.log("so token"+createTokenGatedGroup.chatId + " "+ createTokenGatedGroup);
-  // await userAlice.chat.group.join(chatid)
   }
 
 const createwithchannelId=async()=>{
@@ -195,6 +245,7 @@ const createwithchannelId=async()=>{
   const joinGroup = await userA.chat.group.join('79d3b055d0ea15bbaba1577fe4812ba8f9e66e71b9cfeef5bab9ee9e123b74db');
   console.log("sgroup" +joinGroup);
 }
+const apiUrl = `https://proof-service.next.id/v1/proof?platform=twitter&identity=${inputText}&exact=true`;
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
@@ -214,7 +265,6 @@ const createwithchannelId=async()=>{
           <li key={did}>
             <div>Chat ID: {chat.chatId}</div>
             <div>Abouts: {chat.did}</div>
-            {/* Add more properties you want to display */}
           </li>
         ))}
       </ul>
@@ -222,11 +272,30 @@ const createwithchannelId=async()=>{
      <button className='m-1 p-2 bg-slate-600' onClick={()=>CreateGroup()}>Creategroup</button>
      </div>
      <div>
-     <button className='m-1 p-2 bg-slate-600' onClick={()=>createChannel()}>createChannel</button>
-     <button className='m-1 p-2 bg-slate-600' onClick={()=>ApiServices()}>Fetch details</button>
-     <button className='m-1 p-2 bg-slate-600' onClick={()=>createwithchannelId()}>Fetch details</button>
-     <button className='m-1 p-2 bg-slate-600' onClick={()=>chatList()}>Fetch details</button>
+     <button className='m-1 p-2 bg-purple-600' onClick={()=>createChannel()}>createChannel</button>
+     <button className='m-1 p-2 bg-purple-600' onClick={()=>ApiServices()}>transact</button>
+     <button className='m-1 p-2 bg-purple-600' onClick={()=>createwithchannelId()}>Fetch details</button>
+     <button className='m-1 p-2 bg-purple-600' onClick={()=>chatList()}>chat List</button>
      </div>
+     <h1>Data Display</h1>
+      {data && (
+        <div>
+          <p>Avatar: {data?.ids[0]?.avatar}</p>
+          <p>Platform: {data?.ids[0]?.proofs[0]?.platform}</p>
+          <p>Identity: {data?.ids[0]?.proofs[0]?.identity}</p>
+        </div>
+      )}
+   <p>You Twitterhandle: {inputText}</p>
+<h1>Input and Display</h1>
+    
+      <input
+        type="text"
+        value={inputText}
+        onChange={handleInputChange}
+        placeholder="Type something..."
+      />
+      <button className='m-1 p-2 bg-slate-600' onClick={()=>Twitterpos()}>Connected with twitter profile or not</button>
+   
     </main>
   )
 }
