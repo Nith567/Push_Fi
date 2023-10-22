@@ -4,33 +4,9 @@ import { send } from '@pushprotocol/restapi/src/lib/chat';
   import { createSocketConnection, EVENTS } from '@pushprotocol/socket';
   import { ethers } from 'ethers';
   import { useEffect, useState } from 'react';
-  // Creating a random signer from a wallet, ideally this is the wallet you will connect
-  // const signer = ethers.Wallet.createRandom();
-// const signerS = ethers.Wallet.createRandom()
-// const userAlice = await PushAPI.initialize(signerS, { env: 'staging' })
-// const response = await userAlice.channel.create({
-//   name: 'DEMO Test Channel',
-//   description: 'this is a demo testchannel',
-//   icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAz0lEQVR4AcXBsU0EQQyG0e+saWJ7oACiKYDMEZVs6GgSpC2BIhzRwAS0sgk9HKn3gpFOAv3v3V4/3+4U4Z1q5KTy42Ql940qvFONnFSGmCFmiN2+fj7uCBlihpgh1ngwcvKfwjuVIWaIGWKNB+GdauSk8uNkJfeNKryzYogZYoZY40m5b/wlQ8wQM8TayMlKeKcaOVkJ71QjJyuGmCFmiDUe+HFy4VyEd57hx0mV+0ZliBlihlgL71w4FyMnVXhnZeSkiu93qheuDDFDzBD7BcCyMAOfy204AAAAAElFTkSuQmCC',
-//   url: 'https://push.org',
-// })
-//   const bobWalletAddress = "0x99A08ac6254dcf7ccc37CeC662aeba8eFA666666";
 
-//   const aliceMessagesBob = await userAlice.chat.send(bobWalletAddress, {
-//     content: "Gm gm! It's a me... Mario"
-//   });
+  import { CovalentClient } from "@covalenthq/client-sdk";
 
-//   const pushSDKSocket = createSocketConnection({
-//     user: signer.wallet,
-//     socketType: 'chat',
-//     socketOptions: { autoConnect: true, reconnectionAttempts: 3 },
-//     env: 'staging',
-//   });
-
-//   // React to message payload getting received
-//   pushSDKSocket?.on(EVENTS.CHAT_RECEIVED_MESSAGE, (message) => {
-//     console.log("hit"+ message);
-//   });
  function Home() {
 
 
@@ -39,6 +15,7 @@ const [state, setState] = useState({
   signer:null
 
 });
+const [data,setData]=useState({})
 const [account, setAccount] = useState('None');
 const connectWallet = async () => {
   try {
@@ -70,6 +47,38 @@ const connectWallet = async () => {
   }
 };
 
+
+
+let addressExists = false;
+  const ApiServices = async () => {
+    const client = new CovalentClient("cqt_rQRBMP9wyWbGXhT4qCXBWMJRMyCB");
+    // const resp = await client.BalanceService.getTokenBalancesForWalletAddress("eth-sepolia", "0x161D70B69fdbD2D4656Dd1ba62845DEa5008c634"); // Example call
+    // const resp = await client.TransactionService.getTransactionSummary("eth-sepolia","0x161D70B69fdbD2D4656Dd1ba62845DEa5008c634");
+    // const resp2 = await client.BaseService.getAddressActivity("0xA2a9055A014857d6c1e8f1BDD8682B6459C5Fa85");
+    try {
+      for await (const resp of client.TransactionService.getAllTransactionsForAddress("eth-mainnet","0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5")
+      ) 
+       {
+        // if (resp.to_address === '0xEA64CbF3E0666D0A9ae465dfc6b6Ca6207377b96') {
+        //   addressExists = true;
+        //   break;
+        // }
+      if(resp.to_address==='0xe688b84b23f322a994a53dbf8e15fa82cdb71127'){
+        addressExists=true;
+        break;
+      }
+       }
+       if (addressExists) {
+        console.log(`Address ${targetAddress} exists in the API response.`);
+      } else {
+        console.log(`Address ${targetAddress} does not exist in the API response.`);
+      }
+  } catch (error) {
+      console.log(error.message);
+  }
+}
+
+
 const CreateGroup=async()=>{
   const userA= await PushAPI.initialize(state.signer, { env: 'staging' });
 
@@ -92,6 +101,17 @@ const newGroup = await userA?.chat?.group?.create(groupName,
     },
   },)
   console.log(newGroup)
+}
+
+
+const createChannel=async()=>{
+  const userA= await PushAPI.initialize(state.signer, { env: 'staging' });
+  const response = await userA?.channel.create({
+  name: 'DEMO Test Channel',
+  description: 'demo eth channel ',
+  icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAz0lEQVR4AcXBsU0EQQyG0e+saWJ7oACiKYDMEZVs6GgSpC2BIhzRwAS0sgk9HKn3gpFOAv3v3V4/3+4U4Z1q5KTy42Ql940qvFONnFSGmCFmiN2+fj7uCBlihpgh1ngwcvKfwjuVIWaIGWKNB+GdauSk8uNkJfeNKryzYogZYoZY40m5b/wlQ8wQM8TayMlKeKcaOVkJ71QjJyuGmCFmiDUe+HFy4VyEd57hx0mV+0ZliBlihlgL71w4FyMnVXhnZeSkiu93qheuDDFDzBD7BcCyMAOfy204AAAAAElFTkSuQmCC',
+  url: 'https://push.org',
+})
 }
 const sendMesage=async()=>{
     const userA= await PushAPI.initialize(state.signer, { env: 'staging' });
@@ -118,10 +138,15 @@ const sendMesage=async()=>{
             )}
                 </div>
                 Create a Channel
+              
                 <button className='m-1 p-2 bg-slate-500' onClick={()=>sendMesage()}>join</button>
      </div>
      <div>
      <button className='m-1 p-2 bg-slate-600' onClick={()=>CreateGroup()}>Creategroup</button>
+     </div>
+     <div>
+     <button className='m-1 p-2 bg-slate-600' onClick={()=>createChannel()}>createChannel</button>
+     <button className='m-1 p-2 bg-slate-600' onClick={()=>ApiServices()}>Fetch details</button>
      </div>
     </main>
   )
